@@ -52,6 +52,7 @@
 #include <linux/delay.h>
 #include <linux/nmi.h>
 #include <linux/locallock.h>
+#include <linux/delay.h>
 
 #include "workqueue_internal.h"
 
@@ -1305,13 +1306,14 @@ fail:
 	local_unlock_irqrestore(pendingb_lock, *flags);
 	if (work_is_canceling(work))
 		return -ENOENT;
-	cpu_relax();
+	cpu_chill();
 	/*
 	 * The queueing is in progress in another context. If we keep
 	 * taking the pool->lock in a busy loop, the other context may
 	 * never get the lock. Give 1 usec delay to avoid this contention.
 	 */
 	udelay(1);
+
 	return -EAGAIN;
 }
 
