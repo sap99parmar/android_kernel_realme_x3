@@ -2982,6 +2982,7 @@ static struct rq *finish_task_switch(struct task_struct *prev)
 			kprobe_flush_task(prev);
 
 			finish_task_switch_dead(prev);
+
 	}
 
 	tick_nohz_task_switch();
