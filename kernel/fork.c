@@ -424,11 +424,10 @@ void __put_task_struct(struct task_struct *tsk)
 	/*
 	 * Remove function-return probe instances associated with this
 	 * task and put them back on the free list.
-	 */
-	kprobe_flush_task(tsk);
+	*/
+	kprobe_flush_task(prev);
 
-	/* Task is done with its stack. */
-	put_task_stack(tsk);
+	finish_task_switch_dead(prev);
 
 	cgroup_free(tsk);
 	task_numa_free(tsk, true);
