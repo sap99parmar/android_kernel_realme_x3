@@ -425,9 +425,7 @@ void __put_task_struct(struct task_struct *tsk)
 	 * Remove function-return probe instances associated with this
 	 * task and put them back on the free list.
 	*/
-	kprobe_flush_task(prev);
-
-	finish_task_switch_dead(prev);
+	kprobe_flush_task(tsk);
 
 	cgroup_free(tsk);
 	task_numa_free(tsk, true);

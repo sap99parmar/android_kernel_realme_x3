@@ -2975,6 +2975,7 @@ static struct rq *finish_task_switch(struct task_struct *prev)
 			if (prev->sched_class->task_dead)
 				prev->sched_class->task_dead(prev);
 
+	finish_task_switch_dead(prev);
 	}
 
 	tick_nohz_task_switch();
