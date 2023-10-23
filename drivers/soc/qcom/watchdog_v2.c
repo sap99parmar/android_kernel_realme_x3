@@ -410,11 +410,7 @@ static void ping_other_cpus(struct msm_watchdog_data *wdog_dd)
 	 * disabled (which is what smp_call_function_single() does in
 	 * synchronous mode).
 	 */
-<<<<<<< HEAD
-	preempt_disable();
-=======
 	migrate_disable();
->>>>>>> 98607ac44d5b (soc: qcom: watchdog_v2: Optimize IPI pings to reduce system jitter)
 	this_cpu = raw_smp_processor_id();
 	atomic_set(&wdog_dd->alive_mask, BIT(this_cpu));
 	online_mask = *cpumask_bits(cpu_online_mask) & ~BIT(this_cpu);
@@ -427,45 +423,8 @@ static void ping_other_cpus(struct msm_watchdog_data *wdog_dd)
 		generic_exec_single(cpu, per_cpu_ptr(&csd_data, cpu),
 				    keep_alive_response,
 				    (void *)(BIT(cpu + 32) | final_alive_mask));
-<<<<<<< HEAD
-=======
-	}
+	}			    
 	migrate_enable();
-
-	atomic_set(&wdog_dd->pinged_mask, final_alive_mask);
-	while (1) {
-		set_current_state(TASK_UNINTERRUPTIBLE);
-		if (atomic_read(&wdog_dd->alive_mask) == final_alive_mask)
-			break;
-		schedule();
-	}
-	__set_current_state(TASK_RUNNING);
-}
-
-/* Set pet observer to expire 1 second before watchdog bite */
-#define PET_OBSERVER_OFFSET_SECS (WDOG_BITE_OFFSET_IN_SECONDS - 1)
-
-static void print_wdog_data(struct msm_watchdog_data *wdog_dd);
-
-static void pet_observer_fn(unsigned long data)
-{
-	struct msm_watchdog_data *wdog_dd =
-		(struct msm_watchdog_data *)data;
-	int wdog_counter = get_wdog_sts(wdog_dd) / WDT_HZ;
-	int observer_threshold = ((wdog_dd->bark_time / 1000) +
-				PET_OBSERVER_OFFSET_SECS);
-
-	if (wdog_counter < observer_threshold)
-		mod_timer(&wdog_dd->pet_observer, jiffies + msecs_to_jiffies(
-				(observer_threshold - wdog_counter) * 1000));
-	else {
-		pr_warn("MSM watchdog blocked for %d seconds\n", wdog_counter);
-		pr_warn("Print watchdog data:\n");
-		print_wdog_data(wdog_dd);
-		pr_warn("Watchdog will bite in 1 second.\n");
->>>>>>> 98607ac44d5b (soc: qcom: watchdog_v2: Optimize IPI pings to reduce system jitter)
-	}
-	preempt_enable();
 
 	atomic_set(&wdog_dd->pinged_mask, final_alive_mask);
 	while (1) {
