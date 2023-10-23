@@ -199,6 +199,7 @@ static int pm_qos_dbg_show_requests(struct seq_file *s, void *unused)
 	struct pm_qos_constraints *c;
 	struct pm_qos_request *req;
 	char *type;
+	unsigned long flags;
 	int tot_reqs = 0;
 	int active_reqs = 0;
 
@@ -213,7 +214,7 @@ static int pm_qos_dbg_show_requests(struct seq_file *s, void *unused)
 	}
 
 	/* Lock to ensure we have a snapshot */
-	raw_spin_lock(&pm_qos_lock);
+	raw_spin_lock_irqsave(&pm_qos_lock, flags);
 	if (plist_head_empty(&c->list)) {
 		seq_puts(s, "Empty!\n");
 		goto out;
@@ -249,7 +250,7 @@ static int pm_qos_dbg_show_requests(struct seq_file *s, void *unused)
 		   type, pm_qos_get_value(c), active_reqs, tot_reqs);
 
 out:
-	raw_spin_unlock(&pm_qos_lock);
+	raw_spin_unlock_irqrestore(&pm_qos_lock, flags);
 	return 0;
 }
 
@@ -326,9 +327,10 @@ int pm_qos_update_target(struct pm_qos_constraints *c, struct plist_node *node,
 {
 	int prev_value, curr_value, new_value;
 	struct cpumask cpus;
+	unsigned long flags;
 	int ret;
 
-	raw_spin_lock(&pm_qos_lock);
+	raw_spin_lock_irqsave(&pm_qos_lock, flags);
 	prev_value = pm_qos_get_value(c);
 	if (value == PM_QOS_DEFAULT_VALUE)
 		new_value = c->default_value;
@@ -360,7 +362,7 @@ int pm_qos_update_target(struct pm_qos_constraints *c, struct plist_node *node,
 	pm_qos_set_value(c, curr_value);
 	ret = pm_qos_set_value_for_cpus(c, &cpus);
 
-	raw_spin_unlock(&pm_qos_lock);
+	raw_spin_unlock_irqrestore(&pm_qos_lock, flags);
 
 	trace_pm_qos_update_target(action, prev_value, curr_value);
 
@@ -414,8 +416,9 @@ bool pm_qos_update_flags(struct pm_qos_flags *pqf,
 			 enum pm_qos_req_action action, s32 val)
 {
 	s32 prev_value, curr_value;
+	unsigned long flags;
 
-	raw_spin_lock(&pm_qos_lock);
+	raw_spin_lock_irqsave(&pm_qos_lock, flags);
 
 	prev_value = list_empty(&pqf->list) ? 0 : pqf->effective_flags;
 
@@ -438,7 +441,7 @@ bool pm_qos_update_flags(struct pm_qos_flags *pqf,
 
 	curr_value = list_empty(&pqf->list) ? 0 : pqf->effective_flags;
 
-	raw_spin_unlock(&pm_qos_lock);
+	raw_spin_unlock_irqrestore(&pm_qos_lock, flags);
 
 	trace_pm_qos_update_flags(action, prev_value, curr_value);
 	return prev_value != curr_value;
@@ -476,8 +479,9 @@ int pm_qos_request_for_cpumask(int pm_qos_class, struct cpumask *mask)
 	int cpu;
 	struct pm_qos_constraints *c = NULL;
 	int val;
+	unsigned long flags;
 
-	raw_spin_lock(&pm_qos_lock);
+	raw_spin_lock_irqsave(&pm_qos_lock, flags);
 	c = pm_qos_array[pm_qos_class]->constraints;
 	val = c->default_value;
 
@@ -496,7 +500,7 @@ int pm_qos_request_for_cpumask(int pm_qos_class, struct cpumask *mask)
 			break;
 		}
 	}
-	raw_spin_unlock(&pm_qos_lock);
+	raw_spin_unlock_irqrestore(&pm_qos_lock, flags);
 
 	return val;
 }
@@ -539,9 +543,9 @@ static void pm_qos_irq_release(struct kref *ref)
 	struct pm_qos_constraints *c =
 				pm_qos_array[req->pm_qos_class]->constraints;
 
-	spin_lock_irqsave(&pm_qos_lock, flags);
+	raw_spin_lock_irqsave(&pm_qos_lock, flags);
 	cpumask_setall(&req->cpus_affine);
-	spin_unlock_irqrestore(&pm_qos_lock, flags);
+	raw_spin_unlock_irqrestore(&pm_qos_lock, flags);
 
 	pm_qos_update_target(c, &req->node, PM_QOS_UPDATE_REQ,
 			c->default_value);
@@ -560,13 +564,13 @@ static void pm_qos_irq_notify(struct irq_affinity_notify *notify,
 			irq_data_get_effective_affinity_mask(&desc->irq_data);
 	bool affinity_changed = false;
 
-	spin_lock_irqsave(&pm_qos_lock, flags);
+	raw_spin_lock_irqsave(&pm_qos_lock, flags);
 	if (!cpumask_equal(&req->cpus_affine, new_affinity)) {
 		cpumask_copy(&req->cpus_affine, new_affinity);
 		affinity_changed = true;
 	}
 
-	spin_unlock_irqrestore(&pm_qos_lock, flags);
+	raw_spin_unlock_irqrestore(&pm_qos_lock, flags);
 
 	if (affinity_changed)
 		pm_qos_update_target(c, &req->node, PM_QOS_UPDATE_REQ,
