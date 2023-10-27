@@ -387,8 +387,8 @@ void keyslot_manager_put_slot(struct keyslot_manager *ksm, unsigned int slot)
 	if (WARN_ON(slot >= ksm->num_slots))
 		return;
 
-	if (atomic_dec_and_lock_irqsave(&ksm->slots[slot].slot_refs,
-					&ksm->idle_slots_lock, flags)) {
+	if (atomic_dec_and_spin_lock(&ksm->slots[slot].slot_refs,
+					&ksm->idle_slots_lock)) {
 		list_add_tail(&ksm->slots[slot].idle_slot_node,
 			      &ksm->idle_slots);
 		spin_unlock_irqrestore(&ksm->idle_slots_lock, flags);

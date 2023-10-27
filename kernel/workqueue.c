@@ -1326,7 +1326,7 @@ fail:
 	local_unlock_irqrestore(pendingb_lock, *flags);
 	if (work_is_canceling(work))
 		return -ENOENT;
-<	cpu_chill();
+	cpu_chill();
 	return -EAGAIN;
 }
 
