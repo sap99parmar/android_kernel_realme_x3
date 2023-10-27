@@ -80,6 +80,9 @@ static inline bool should_resched(int preempt_offset)
 }
 
 #ifdef CONFIG_PREEMPT
+#ifdef CONFIG_PREEMPT_RT_FULL
+extern void preempt_schedule_lock(void);
+#endif
 void preempt_schedule(void);
 #define __preempt_schedule() preempt_schedule()
 void preempt_schedule_notrace(void);
